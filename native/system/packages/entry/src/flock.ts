@@ -20,7 +20,9 @@ function loadBinding(): FlockBinding {
   }
 
   let filename = 'system.node'
-  if (platform === 'linux') {
+  if (platform === 'android') {
+      filename = join('bionic', filename)
+  } else if (platform === 'linux') {
     // Node's report types omit the libc field supplied by Linux reports.
     const report = process.report.getReport() as { header: { glibcVersionRuntime?: string } }
     filename = join(report.header.glibcVersionRuntime ? 'glibc' : 'musl', filename)
