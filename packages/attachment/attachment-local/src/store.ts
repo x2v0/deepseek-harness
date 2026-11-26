@@ -360,10 +360,10 @@ async function publishStagedObject(
   staged: StagedImmutableObject,
 ): Promise<void> {
   const parent = dirname(target)
+  let stagedLinked = true
   try {
     await ensureDurableDirectory(parent, staged.boundary)
     try {
-      let stagedLinked = true
       /* termux-link-fallback: bionic link(2); rename moves staged into place */
       try {
         await link(staged.path, target)
