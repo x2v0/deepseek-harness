@@ -625,6 +625,18 @@ export async function writeFileAtomic(
   const copyFileDacl = internals.copyFileDacl ?? copyFileDaclWin32
   const replaceFile = internals.replaceFile ?? replaceFileWin32
   const linkFile = internals.linkFile ?? link
+  // termux-link-fallback: bionic may block link(2) with EACCES/EPERM/ENOSYS; use rename
+  const isAndroidPlatform = platform === 'android'
+  const linkOrRenameOnBionic = async (src: string, dst: string) => {
+    try {
+      await linkFile(src, dst)
+    } catch (error: unknown) {
+      if (!isAndroidPlatform) throw error
+      const code = (error as NodeJS.ErrnoException)?.code
+      if (code !== 'EACCES' && code !== 'EPERM' && code !== 'ENOSYS') throw error
+      await rename(src, dst)
+    }
+  }
   const inspectPublicationTarget = internals.inspectPublicationTarget
     ?? (path => lstat(path, { bigint: true }))
   const removeStagingDir = internals.removeStagingDir
@@ -651,7 +663,7 @@ export async function writeFileAtomic(
     throwIfAborted(signal, 'write')
     if (options.createIfAbsent) {
       try {
-        await linkFile(tempPath, absolutePath)
+        await linkOrRenameOnBionic(tempPath, absolutePath)
       } catch (error: unknown) {
         await throwGuardedCreateFailure(error, absolutePath, displayPath, inspectPublicationTarget)
       }
